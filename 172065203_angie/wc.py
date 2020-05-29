@@ -7,7 +7,7 @@ import stopwords as sw
 # datetime object containing current date and time
 now = datetime.now()
 
-# dd/mm/YY H:M:S
+# Time
 dt_string = now.strftime("%m/%d/%Y %I:%M %p")
 
 # Thread: "Angie Varona is at her peak right now IMO"
