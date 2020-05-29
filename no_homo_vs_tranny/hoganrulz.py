@@ -24,9 +24,6 @@ numOfPosts = [postNum.replace(',', '') for postNum in numOfPosts]
 
 print(numOfPosts)
 
-numm = [int(item) for item in numOfPosts]
-print(sum(numm))
-
 # Skip any threads longer than 10 pages or it will take forever
 listOfThreads = [listOfThreads[i] for i in range(len(listOfThreads)) if numOfPosts[i] != '-' and int(numOfPosts[i]) <= 9000]
 
