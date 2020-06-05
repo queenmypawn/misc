@@ -18,6 +18,7 @@ threadListXPath = '//a[@class="title"]/@href'
 numOfPostsPerPageXPath = '//td[@class="othercol td-reply"]/text()'
 userNameXPath = '//a[@class="username popupctrl"]/strong/text()'
 userInfoXPath = '//dl[@class="userinfo_extra"]/dt/text()'
+repPowerXPath = '//dl[@class="userinfo_extra"]/dt/span/text()'
 endOfNewPost = '\r\n\t\t\t\t\t\t'
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -88,8 +89,11 @@ def getPostContent(threadPage):
 			posts.remove(item)
 	return posts
 
-def getThreadsAndPostNumbers(pages = 1, noStickies = False):
+# Returns a list of 2-tuples with threads and post numbers.
+def getThreadsAndPostNumbers(threads = 25, pages = 1, noStickies = False): # Add post min., post max. requirement
 	# Threads
+	if not isinstance(threads, int) or threads > 25:
+		raise Exception("You broke the program! Negged.")
 	numOfPosts = []
 	threadsWithPostNumbers = []
 	firstPage = True
@@ -99,29 +103,30 @@ def getThreadsAndPostNumbers(pages = 1, noStickies = False):
 		tree = getTree(url_String)
 		threadURL = tree.xpath(threadListXPath)
 		listOfThreads.append(threadURL)
+		print(f'In page {i}')
 		# Their post numbers
 		numOfPosts = tree.xpath(numOfPostsPerPageXPath)
 		numOfPosts = [''.join(item.split()) for item in numOfPosts]
 		# Form the tuples and append them
 		if firstPage:
 			if noStickies == True:
-				for i in range(6, 31): # Assumes 6 stickies. Sticky counter can be built, though.
+				for i in range(6, threads + 6): # Assumes 6 stickies. Sticky counter can be built, though.
 					threadsWithPostNumbers.append((f'{bbURL}{listOfThreads[0][i]}', numOfPosts[i]))				
 			else:			
-				for i in range(31): # The number of threads per page including stickies.
+				for i in range(threads + 6): # The number of threads per page including stickies.
 					threadsWithPostNumbers.append((f'{bbURL}{listOfThreads[0][i]}', numOfPosts[i]))		
 		else:			
-			for i in range(25): # The number of threads per page not including stickies.
+			for i in range(threads): # The number of threads per page not including stickies.
 				threadsWithPostNumbers.append((f'{bbURL}{listOfThreads[0][i]}', numOfPosts[i]))
 		
 		firstPage = False
 	return threadsWithPostNumbers
 
-def searchPhraseInThread(thread, page_limit, **kwargs):
+def searchPhraseInThread(thread, page_limit, *args):
 	count = 0
 	for i in range(page_limit):
 		interestingURL = f'{bodybuildingURL}{thread}&page={i}'
-		values = [item for item in kwargs.values()][0]
+		values = [item for item in args]
 		for value in values:
 			postContent = getPostContent(interestingURL)
 			for post in postContent:
@@ -129,9 +134,12 @@ def searchPhraseInThread(thread, page_limit, **kwargs):
 					count += 1
 	return count
 
+# Returns a list of dictionary of users with username, join date, posts, rep power as keys.
 def getUserInfo(webpage):
-	userList = getXPathContent(webpage, userNameXPath)
-	unFormattedUserInfo = getXPathContent(webpage, userInfoXPath)
+	tree = getTree(webpage)
+	userList = tree.xpath(userNameXPath)
+	unFormattedUserInfo = tree.xpath(userInfoXPath)
+	repPowerInfo = tree.xpath(repPowerXPath)
 	userInfo = [unFormattedUserInfo[i] for i in range(len(unFormattedUserInfo))
 		if unFormattedUserInfo[i] != ' ' and not unFormattedUserInfo[i].startswith('Location')
 		and not unFormattedUserInfo[i].startswith('Age')]
@@ -146,13 +154,13 @@ def getUserInfo(webpage):
 		# Location to be added soon...but not all users have a location.
 		userInfo[j + 1] = userInfo[j + 1].replace('Posts: ', '')
 		userData['Posts'] = userInfo[j + 1]
-		userInfo[j + 2] = userInfo[j + 2].replace('Rep Power: ', '')
-		userData['Rep Power'] = userInfo[j + 2]
+		userInfo[j + 2] = repPowerInfo[i].replace('Rep Power: ', '')
+		userData['Rep Power'] = repPowerInfo[i]
 		j += 3
 		allUserData.append(userData)
 	return allUserData
 
-def buildBarGraph(x = [], y = [], title = 'Default', time = lambda:getDateTime()):
+def buildBarGraph(x = [], y = [], title = '', time = lambda:getDateTime()):
 	keys = x
 	values = y
 
@@ -168,7 +176,26 @@ def buildBarGraph(x = [], y = [], title = 'Default', time = lambda:getDateTime()
 	    )
 	return graph
 
-def dashIt(graph = None, pageTitle = '', pageDesc = ''): # **kwargs): <--- Add multiple graphs.
+def buildScatter(x = [], y = [], title = '', time = lambda:getDateTime(), text=''):
+	keys = x
+	values = y
+
+	graph = go.Figure([go.Scatter(
+		x = x,
+		y = y,
+		mode = 'markers+text',
+		text = text,
+		textposition = 'bottom center'
+		)])
+
+	# Prettifying the bar chart
+	graph.update_layout(
+	    title = f'{title}, {time()}',
+	    title_x = 0.5, # Centralizing the title
+	    )
+	return graph
+
+def dashIt(graph = None, graph2 = None, pageTitle = '', pageDesc = ''): # **kwargs): <--- Add multiple graphs.
 
 	# graphs = [graph for graph in kwargs.values()][0]
 
@@ -182,6 +209,12 @@ def dashIt(graph = None, pageTitle = '', pageDesc = ''): # **kwargs): <--- Add m
 	        html.Div([
 	            dcc.Graph(id='Chart {i}', figure = graph)
 	        ], className='nine columns'),
+		]),
+
+		html.Div([
+	        html.Div([
+	            dcc.Graph(id='Chart 2', figure = graph2)
+	        ], className='nine columns'),
 		])
 	])
-	app.run_server()	
+	app.run_server()
