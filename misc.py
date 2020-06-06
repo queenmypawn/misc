@@ -120,6 +120,8 @@ def getThreadsAndPostNumbers(threads = 25, pages = 1, noStickies = False): # Add
 				threadsWithPostNumbers.append((f'{bbURL}{listOfThreads[0][i]}', numOfPosts[i]))
 		
 		firstPage = False
+		if i == pages: # debugging purposes
+			print("End of program")
 	return threadsWithPostNumbers
 
 def searchPhraseInThread(thread, page_limit, *args):
@@ -211,10 +213,5 @@ def dashIt(graph = None, graph2 = None, pageTitle = '', pageDesc = ''): # **kwar
 	        ], className='nine columns'),
 		]),
 
-		html.Div([
-	        html.Div([
-	            dcc.Graph(id='Chart 2', figure = graph2)
-	        ], className='nine columns'),
-		])
 	])
 	app.run_server()
